@@ -31,7 +31,7 @@ minimal set of management command-line tools.
 From scratch on a new VM (boot the NixOS minimal ISO, clone this repo):
 
 ```sh
-git clone <this-repo> /tmp/nixos-template && cd /tmp/nixos-template
+git clone <this-repo> /tmp/nixos-template-docker && cd /tmp/nixos-template-docker
 sudo ./partition-disk.sh /dev/vda --mount
 sudo cp -r . /mnt/etc/nixos
 sudo nixos-install --root /mnt
