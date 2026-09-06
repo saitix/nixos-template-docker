@@ -3,13 +3,6 @@
 A NixOS configuration template for a basic VM/server setup with Docker and a
 minimal set of management command-line tools.
 
-This template intentionally excludes WHMCS-specific components:
-
-- webserver config
-- ionCube
-- PHP
-- Percona/MySQL
-
 ## Files
 
 | File | Purpose |
