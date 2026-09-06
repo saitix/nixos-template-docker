@@ -14,7 +14,7 @@ This template intentionally excludes WHMCS-specific components:
 
 | File | Purpose |
 | --- | --- |
-| `configuration.nix` | Base system config (boot, DHCP networking, Docker, OpenSSH, minimal CLI tools) |
+| `configuration.nix` | Base system config (boot, DHCP networking, locale/timezone, Nix GC, Docker, OpenSSH, QEMU guest, management CLI tools) |
 | `hardware-configuration.nix` | QEMU guest profile + mounts by filesystem LABEL (`root`, `BOOT`) |
 | `partition-disk.sh` | Wipes a target disk, creates the UEFI layout, formats filesystems, and rewrites `hardware-configuration.nix` using LABEL-based mounts |
 
@@ -23,7 +23,15 @@ This template intentionally excludes WHMCS-specific components:
 - Docker daemon (`virtualisation.docker.enable = true`)
 - OpenSSH
 - QEMU guest agent
-- CLI utilities: `curl`, `git`, `htop`, `net-tools`, `psmisc`, `tcpdump`, `tmux`, `vim`, `wget`
+- CLI utilities: `curl`, `docker`, `elinks`, `git`, `hdparm`, `htop`, `mc`, `net-tools`, `nmon`, `psmisc`, `pydf`, `tcpdump`, `tmux`, `vim`, `wget`
+
+## Default configuration highlights
+
+- Hostname/domain placeholders: `docker-host` / `example.com`
+- DHCP enabled on all interfaces (`networking.useDHCP = true`)
+- Time zone: `Europe/Copenhagen`
+- Locale: `en_US.UTF-8`
+- Nix garbage collection: weekly, deleting generations older than 60 days
 
 ## Deploying
 
