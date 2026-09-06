@@ -25,6 +25,10 @@
   networking.hostName = "docker-host"; # TODO: set real hostname  
   networking.domain = "example.com"; #TODO: set the real domain
 
+  # Disable predictable interface names (enp1s0, ens33, ...) so NICs keep
+  # classic kernel names: eth0, eth1, ... (adds net.ifnames=0 to kernel params).
+  networking.usePredictableInterfaceNames = false;
+  
   # Internal-network-only server; external access arrives via port forwarding
   # on the firewall. IP is assigned by DHCP (optionally reserved for this
   # VM's MAC address on the DHCP server).
@@ -33,7 +37,7 @@
   networking.useDHCP = true;
   # If you later want DHCP on a specific interface only, uncomment and set:
   # networking.useDHCP = false;
-  # networking.interfaces.enp1s0.useDHCP = true;
+  # networking.interfaces.eth0.useDHCP = true;
 
   # Set your time zone.
   time.timeZone = "Europe/Copenhagen";
