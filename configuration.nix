@@ -94,6 +94,7 @@
     git
     hdparm
     htop
+    lsb-release
     mc
     net-tools
     nmon
