@@ -21,7 +21,11 @@ minimal set of management command-line tools.
 ## Default configuration highlights
 
 - Hostname/domain placeholders: `docker-host` / `example.com`
-- DHCP enabled on all interfaces (`networking.useDHCP = true`)
+- DHCP enabled on all interfaces (`networking.useDHCP = true`), identifying by
+  MAC address rather than dhcpcd's per-install DUID so MAC reservations survive
+  a reinstall
+- A commented static-IP block for `eth0` in `configuration.nix`, for LANs where
+  DHCP is unreliable
 - Time zone: `Europe/Copenhagen`
 - Locale: `en_US.UTF-8`
 - Nix garbage collection: weekly, deleting generations older than 60 days

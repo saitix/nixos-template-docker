@@ -39,6 +39,41 @@
   # networking.useDHCP = false;
   # networking.interfaces.eth0.useDHCP = true;
 
+  # Identify to the DHCP server by MAC address (RFC 2132 client-id) instead of
+  # dhcpcd's default DUID. The DUID lives in /var/lib/dhcpcd/duid and is
+  # generated fresh on every install, so a reinstalled VM looks like a brand
+  # new client to the DHCP server even though the NIC's MAC is unchanged. That
+  # breaks MAC reservations and makes servers that still hold a lease for the
+  # old identity answer DHCPNAK ("requested address not available"). The MAC is
+  # stable across reinstalls, so this keeps the machine's identity constant.
+  networking.dhcpcd.extraConfig = ''
+    clientid
+  '';
+
+  # --- Static IP alternative -------------------------------------------------
+  # Preferred when the LAN has more than one DHCP server (an unsynced failover
+  # pair will offer an address and then NAK the request for it, leaving the
+  # host with no lease at all). Comment out networking.useDHCP above, set
+  # it to false, and uncomment this block. Adjust the addresses to your LAN,
+  # and make sure the chosen address is excluded from the DHCP pool.
+  #
+  # networking.useDHCP = false;
+  # networking.interfaces.eth0.ipv4.addresses = [
+  #   {
+  #     address = "10.0.100.150";
+  #     prefixLength = 24; # 24 = 255.255.255.0
+  #   }
+  # ];
+  # networking.defaultGateway = {
+  #   address = "10.0.100.1";
+  #   interface = "eth0";
+  # };
+  # networking.nameservers = [
+  #   "10.0.100.12"
+  #   "10.0.100.13"
+  # ];
+  # ---------------------------------------------------------------------------
+
   # Set your time zone.
   time.timeZone = "Europe/Copenhagen";
 
