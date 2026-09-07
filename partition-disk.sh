@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# partition-disk.sh — partition a blank disk for this NixOS Docker template
+# partition-disk.sh — partition a blank disk for this NixOS template
 # and rewrite hardware-configuration.nix to mount by LABEL instead of UUID.
 #
 # Layout (UEFI, entire disk):
@@ -24,6 +24,9 @@ FS_TYPE="ext4"        # root filesystem type: "ext4" or "btrfs"
 MOUNTPOINT="/mnt"     # target mountpoint when --mount is used
 HW_CONF_NAME="hardware-configuration.nix"  # rewritten in-place next to this script
 
+# Derived below (do not edit):
+#   DISK, BOOT_PART, ROOT_PART, HW_CONF, SCRIPT_DIR
+
 usage() {
   echo "Usage: sudo $0 <disk-device> [--yes] [--mount]"
   echo ""
@@ -38,6 +41,7 @@ usage() {
   exit 1
 }
 
+#Read command-line arguments
 [[ $# -ge 1 ]] || usage
 DISK="$1"
 ASSUME_YES=0
@@ -49,6 +53,8 @@ for arg in "${@:2}"; do
     *)       usage ;;
   esac
 done
+
+# --- sanity checks -------------------------------------------------------
 
 case "$FS_TYPE" in
   ext4|btrfs) ;;
@@ -65,6 +71,7 @@ fi
 
 DISK_BASENAME="$(basename "$DISK")"
 
+# Refuse disks that are mounted anywhere (including the running system).
 if lsblk -rn -o NAME,MOUNTPOINT "/dev/$DISK_BASENAME" 2>/dev/null | grep -q '[[:space:]]/'; then
   echo "ERROR: $DISK (or a partition on it) is mounted — refusing to wipe" >&2; exit 1
 fi
@@ -75,6 +82,7 @@ if [[ ! -f "$HW_CONF" ]]; then
   echo "ERROR: $HW_CONF not found next to this script" >&2; exit 1
 fi
 
+# Partition node naming: /dev/vda -> vda1, /dev/nvme0n1 -> nvme0n1p1
 if [[ "$DISK_BASENAME" =~ [0-9]$ ]]; then
   P="p"
 else
@@ -83,12 +91,17 @@ fi
 BOOT_PART="${DISK}${P}1"
 ROOT_PART="${DISK}${P}2"
 
+# Mount options for / in the generated hardware-configuration.nix.
+# btrfs gets the standard optimised set (SSD-aware, zstd-compressed,
+# space_cache v2). ext4 needs none.
 if [[ "$FS_TYPE" == "btrfs" ]]; then
   ROOTFS_OPTIONS='
       options = [ "noatime" "compress=zstd" "ssd" "space_cache=v2" ];'
 else
   ROOTFS_OPTIONS=""
 fi
+
+# --- confirm -------------------------------------------------------------
 
 echo "About to WIPE AND REPARTITION this disk:"
 lsblk -d -o NAME,SIZE,TYPE,MODEL "$DISK"
@@ -100,6 +113,8 @@ if [[ $ASSUME_YES -ne 1 ]]; then
   read -rp "Type YES to continue: " reply
   [[ "$reply" == "YES" ]] || { echo "Aborted."; exit 1; }
 fi
+
+# --- partition -----------------------------------------------------------
 
 echo ">> Creating GPT partition table on $DISK"
 if command -v sgdisk >/dev/null 2>&1; then
@@ -113,6 +128,7 @@ fi
 partprobe "$DISK" || true
 udevadm settle
 
+# Wait for both partition devices to appear (can lag behind on VMs).
 for i in $(seq 1 10); do
   [[ -b "$BOOT_PART" && -b "$ROOT_PART" ]] && break
   sleep 1
@@ -120,6 +136,8 @@ done
 [[ -b "$BOOT_PART" && -b "$ROOT_PART" ]] || {
   echo "ERROR: partitions $BOOT_PART / $ROOT_PART did not appear" >&2; exit 1;
 }
+
+# --- format --------------------------------------------------------------
 
 echo ">> Formatting $BOOT_PART (FAT32, label $BOOT_LABEL)"
 wipefs -a "$BOOT_PART" 2>/dev/null || true
@@ -141,10 +159,12 @@ for dev in "$BOOT_LABEL" "$ROOT_LABEL"; do
 done
 echo ">> OK: /dev/disk/by-label/{$BOOT_LABEL,$ROOT_LABEL} present"
 
+# --- rewrite hardware-configuration.nix ----------------------------------
+
 echo ">> Rewriting $HW_CONF with LABEL= mounts"
 cp -a "$HW_CONF" "$HW_CONF.bak"
 
-cat > "$HW_CONF" <<EOH
+cat > "$HW_CONF" <<EOF
 # Managed by partition-disk.sh — mounts by filesystem LABEL so this config
 # works on any disk without hardcoded UUIDs.
 # Do NOT add UUIDs back here; if you repartition, re-run partition-disk.sh.
@@ -176,16 +196,18 @@ cat > "$HW_CONF" <<EOH
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 }
-EOH
+EOF
+
+# --- optional mount ------------------------------------------------------
 
 if [[ $DO_MOUNT -eq 1 ]]; then
   echo ">> Mounting $ROOT_PART at $MOUNTPOINT and $BOOT_PART at $MOUNTPOINT/boot"
   mount "$ROOT_PART" "$MOUNTPOINT"
-  # Create the boot directory before mounting the boot partition
+  # Create the boot directory before mounting the boot partition  
   mkdir -p "$MOUNTPOINT/boot"
   mount "$BOOT_PART" "$MOUNTPOINT/boot"
   # Create the /etc/nixos directory for the NixOS configuration
-  mkdir -p "$MOUNTPOINT/etc/nixos"
+  mkdir -p "$MOUNTPOINT/etc/nixos"  
 fi
 
 echo ""
