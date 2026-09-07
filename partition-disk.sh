@@ -181,8 +181,11 @@ EOH
 if [[ $DO_MOUNT -eq 1 ]]; then
   echo ">> Mounting $ROOT_PART at $MOUNTPOINT and $BOOT_PART at $MOUNTPOINT/boot"
   mount "$ROOT_PART" "$MOUNTPOINT"
+  # Create the boot directory before mounting the boot partition
   mkdir -p "$MOUNTPOINT/boot"
   mount "$BOOT_PART" "$MOUNTPOINT/boot"
+  # Create the /etc/nixos directory for the NixOS configuration
+  mkdir -p "$MOUNTPOINT/etc/nixos"
 fi
 
 echo ""
