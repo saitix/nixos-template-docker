@@ -106,13 +106,52 @@
     wget
   ];
 
-  #Enable the Openssh service
+  # --- SSH --------------------------------------------------------------------
+  # Enable the OpenSSH daemon.
   services.openssh.enable = true;
+
+  # --- SSH on a custom port (55522) -------------------------------------------
+  # Uncomment to move sshd from port 22 to 55522. Only uncomment this section
+  # right before you can test the new port — if sshd moves and the port is
+  # unreachable, you lock yourself out of remote access.
+  #
+  # When active, also update:
+  #   - any port forwards on the upstream firewall/router pointing here
+  #   - your client command:  ssh -p 55522 user@host
+  #
+  # services.openssh.settings = {
+  #   Port = 55522; # non-standard port to dodge casual port-22 scans
+  # };
+  #
+  # The firewall is enabled by default (networking.firewall.enable = true),
+  # and it must allow the port sshd actually listens on:
+  # networking.firewall.allowedTCPPorts = [ 55522 ];
+  #
+  # Keep port 22 open during the switch so you can fall back if the new
+  # port fails; remove it once 55522 is confirmed working:
+  # networking.firewall.allowedTCPPorts = [ 22 55522 ];
+  # -----------------------------------------------------------------------------
+
   #Enable the quemu guest agent (this can be removed if the virtualisation differs)
   services.qemuGuest.enable = true;
 
   # Docker runtime.
   virtualisation.docker.enable = true;
+
+  # ----sudo config--------------------------------------------------------------
+  # Lucian's admin account. isNormalUser + wheel group = sudo access via
+  # the sudo wrapper (/run/wrappers/bin/sudo). Password is locked: login is
+  # SSH-key only, sudo works without a password (wheelNeedsPassword = false
+  # below) unless you remove that and set one with: passwd lucian
+  # users.users.lucian = {
+  #   isNormalUser = true;
+  #   extraGroups = [ "wheel" ];
+  # };
+  # Allow sudo for wheel members without a password (account is key-only).
+  # Remove if you prefer password-checked sudo (then set: passwd lucian).
+  security.sudo.wheelNeedsPassword = false;
+  # -----------------------------------------------------------------------------
+
 
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
