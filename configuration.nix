@@ -91,6 +91,7 @@
     curl
     docker
     elinks
+    fastfetch
     git
     hdparm
     htop
