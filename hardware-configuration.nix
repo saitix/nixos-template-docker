@@ -24,7 +24,7 @@
       options = [ "fmask=0077" "dmask=0077" ];
     };
 
-  # No swap partition by design (512M ESP + rest for /). Add a swapfile
+  # No swap partition by design ($BOOT_SIZE ESP + rest for /). Add a swapfile
   # later if needed.
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
