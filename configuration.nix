@@ -15,6 +15,13 @@
     ./hardware-configuration.nix
   ];
 
+  # This file is the shared BASE config. Per-host settings (hostname, domain,
+  # static IP vs DHCP, SSH port, firewall, users) live in host overlays under
+  # hosts/<name>.nix, each of which imports this file. Deploy a host with:
+  #   nixos-rebuild switch -I nixos-config=<repo>/hosts/<name>.nix
+  # Everything below that a host may need to override is wrapped in mkDefault,
+  # so an overlay can redefine it without a "conflicting definition" error.
+
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.systemd-boot.graceful = true;
@@ -22,8 +29,9 @@
   boot.loader.efi.efiSysMountPoint = "/boot";
   boot.loader.systemd-boot.configurationLimit = 5;
 
-  networking.hostName = "docker-host"; # TODO: set real hostname  
-  networking.domain = "example.com"; #TODO: set the real domain
+  # Per-host identity (mkDefault so hosts/<name>.nix can override).
+  networking.hostName = lib.mkDefault "docker-host"; # TODO: set real hostname
+  networking.domain = lib.mkDefault "example.com"; # TODO: set the real domain
 
   # Disable predictable interface names (enp1s0, ens33, ...) so NICs keep
   # classic kernel names: eth0, eth1, ... (adds net.ifnames=0 to kernel params).
@@ -34,7 +42,8 @@
   # VM's MAC address on the DHCP server).
   # Interface names aren't hardcoded so the config works on any NIC:
   # with scripted networking, useDHCP enables it on all interfaces.
-  networking.useDHCP = true;
+  # mkDefault: a host overlay that needs a static IP sets useDHCP = false.
+  networking.useDHCP = lib.mkDefault true;
   # If you later want DHCP on a specific interface only, uncomment and set:
   # networking.useDHCP = false;
   # networking.interfaces.eth0.useDHCP = true;
@@ -53,9 +62,10 @@
   # --- Static IP alternative -------------------------------------------------
   # Preferred when the LAN has more than one DHCP server (an unsynced failover
   # pair will offer an address and then NAK the request for it, leaving the
-  # host with no lease at all). Comment out networking.useDHCP above, set
-  # it to false, and uncomment this block. Adjust the addresses to your LAN,
-  # and make sure the chosen address is excluded from the DHCP pool.
+  # host with no lease at all). Don't edit this file for that: create a host
+  # overlay in hosts/<name>.nix that sets useDHCP = false and defines the
+  # addresses/gateway/nameservers — see hosts/floopr.io.nix for a working
+  # example. The chosen address must be excluded from the DHCP pool.
   #
   # networking.useDHCP = false;
   # networking.interfaces.eth0.ipv4.addresses = [
@@ -129,8 +139,9 @@
   # networking.firewall.allowedTCPPorts = [ 55522 ];
   #
   # Keep port 22 open during the switch so you can fall back if the new
-  # port fails; remove it once 55522 is confirmed working:
-  # networking.firewall.allowedTCPPorts = [ 22 55522 ];
+  # port fails; remove it once 55522 is confirmed working (and add mta, http, https ports):
+  # networking.firewall.allowedTCPPorts = [ 22 55522 25 80 443];
+  # networking.firewall.allowedUDPPorts = [ 443 ];
   # -----------------------------------------------------------------------------
 
   #Enable the quemu guest agent (this can be removed if the virtualisation differs)
@@ -146,7 +157,7 @@
   # below) unless you remove that and set one with: passwd lucian
   # users.users.lucian = {
   #   isNormalUser = true;
-  #   extraGroups = [ "wheel" ];
+  #   extraGroups = [ "wheel" "docker" ];
   # };
   # Allow sudo for wheel members without a password (account is key-only).
   # Remove if you prefer password-checked sudo (then set: passwd lucian).
